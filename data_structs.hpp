@@ -15,6 +15,7 @@ struct move_internal {
 
 const char en_passant_event = 31;
 const char castle_event = 32;
+const char promotion_event = 33; // Don't need by case promotion as info is more accessible from move trace + boards
 
 struct move {
     char square_from[2];
@@ -36,10 +37,8 @@ const char can_en_passant = 4;
 const char black_castle_short = 8;
 const char black_castle_long = 16;
 
-const char white_king_castle_row = 0;
-const char long_castle_to_clean_col = 0;
-const char short_castle_to_clean_col = 7;
-const char black_king_castle_row = 7;
+const char white_king_castle_row = 0, black_promote_row = 0, long_castle_to_clean_col = 0;
+const char black_king_castle_row = 7, white_promote_row = 7, short_castle_to_clean_col = 7;
 const char white_pawn_double_advance_row = 1;
 const char black_pawn_double_advance_row = 6;
 const char king_init_col = 4;
@@ -63,6 +62,25 @@ const char black_knight = 23;
 const char black_bishop = 24;
 const char black_king = 25;
 const char black_queen = 26;
+
+bool is_white(char piece) {
+    return piece < 20;
+};
+
+/*
+    freedom: direction a piece is still allowed to travel despite being pinned
+*/
+
+const char up_down_pin_freedom = 41;
+const char left_right_freedom = 42;
+const char descending_diagonal_freedom = 43;
+const char ascending_diagonal_freedom = 44;
+const char most_pins_possible = 8;
+
+struct pin {
+    char location[2];
+    char freedom;
+};
 
 char internal_to_printed(char in) {
     switch (in) {
@@ -102,7 +120,7 @@ void print_board(board * board_) {
     "white move: %d\n"
     "move: %d\n"
     "50_move_rule: %d\n"
-    "moves: [", board_->move == 0 ? 0 : board_->trace[board_->move - 1].turns_since_capture_or_advance, board_->white_to_move,
+    "moves: [", board_->move == 0 ? 0 : board_->trace[board_->move - 1].flags, board_->white_to_move,
     board_->move, board_->move == 0 ? 0 : board_->trace[board_->move - 1].turns_since_capture_or_advance);
     for (int i = 0; i < board_->move; i++) {
         printf("%d-%d | %d-%d | %d, ", 
@@ -121,5 +139,12 @@ void print_board(board * board_) {
     };
     printf("\n+-+-+-+-+-+-+-+-+\n");
 };
+
+/*
+    ranges: valid pairs of distances for a piece to move on each axis
+*/
+
+const char knight_ranges[8][2] = {{-2, -1}, {-2, 1}, {2, -1}, {2, 1}, {1, 2}, {1, -2}, {-1, 2}, {-1, -2}};
+const char king_ranges[8][2] = {{1, 1}, {1, 0}, {1, -1}, {0, 1}, {0, -1}, {-1, 1}, {-1, 0}, {-1, -1}};
 
 #endif

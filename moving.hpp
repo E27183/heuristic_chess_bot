@@ -26,7 +26,7 @@ void init_board(board * unset) {
     };
 };
 
-void make_move(move * move_, board * board_) { // Does not check legality, please check move is legal before calling this to avoid undefined behaviour
+void make_move(move * move_, board * board_, char promotion_target = 0) { // Does not check legality, please check move is legal before calling this to avoid undefined behaviour
     char from_piece = board_->piece_positions[move_->square_from[0]][move_->square_from[1]];
     char to_piece = board_->piece_positions[move_->square_to[0]][move_->square_to[1]];
     move_internal current_move = {
@@ -81,6 +81,11 @@ void make_move(move * move_, board * board_) { // Does not check legality, pleas
             };
         };
     };
+    if (from_piece == white_pawn && move_->square_to[1] == white_promote_row) {
+        current_move.taken_piece = promotion_event;
+        board_->piece_positions[move_->square_from[0]][move_->square_from[1]] = empty_square;
+        board_->piece_positions[move_->square_to[0]][move_->square_to[1]] = promotion_target;
+    };
     if (current_move.taken_piece == 0) {
         if ((from_piece == white_pawn || from_piece == black_pawn) && abs(current_move.square_from[1] - current_move.square_to[1]) == 2) {
             current_move.flags = current_move.flags | can_en_passant;
@@ -111,6 +116,65 @@ void make_move(move * move_, board * board_) { // Does not check legality, pleas
         board_->past_positions.insert(std::make_pair(hash, 1));
     };
 };
+
+bool is_in_bounds(char location[2]) {
+    return location[0] >= 0 && location[0] < 8 && location[1] >= 0 && location[1] < 8;
+};
+
+void scan_for_king(board * board_, bool white, char return_buffer[2]) {
+    if (white) {
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                if (board_->piece_positions[i][j] == white_king) {
+                    return_buffer[0] = i;
+                    return_buffer[1] = j;
+                    return;
+                };
+            };
+        };
+    } else {
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                if (board_->piece_positions[i][j] == black_king) {
+                    return_buffer[0] = i;
+                    return_buffer[1] = j;
+                    return;
+                };
+            };
+        };
+    };
+};
+
+bool is_checked_as_white(board * board_) {
+    char king_position[2];
+    scan_for_king(board_, true, king_position);
+    for (int i = 0; i < 8; i++) { // Checked by knight?
+        char target[2] = {king_position[0] + knight_ranges[i][0], king_position[1] + knight_ranges[i][1]};
+        if (is_in_bounds(target) && board_->piece_positions[target[0]][target[1]] == black_knight) {
+            return true;
+        };
+    };
+    for (int i = 0; i < 8; i++) { // Checked by king?
+        char target[2] = {king_position[0] + king_ranges[i][0], king_position[1] + king_ranges[i][1]};
+        if (is_in_bounds(target) && board_->piece_positions[target[0]][target[1]] == black_king) {
+            return true;
+        };
+    };
+    return false;
+};
+
+bool is_checked_as_black(board * board_) {
+    return false;
+};
+
+bool is_checked(board * board_, bool white) {
+    return white ? is_checked_as_white(board_) : is_checked_as_black(board_);
+};
+
+bool is_checked_and_identify_pins(board * board_) {
+    return false;
+};
+
 
 void reset_recent_move(board * board_) {
     board_->move--;
@@ -156,9 +220,17 @@ void reset_recent_move(board * board_) {
             };
             board_->piece_positions[move_to_undo.square_to[0]][move_to_undo.square_to[1]] = empty_square;
         } else {
-            board_->piece_positions[move_to_undo.square_to[0]][move_to_undo.square_to[1]] = move_to_undo.taken_piece;
+            if (move_to_undo.taken_piece != promotion_event) {
+                board_->piece_positions[move_to_undo.square_to[0]][move_to_undo.square_to[1]] = move_to_undo.taken_piece;
+            } else {
+                board_->piece_positions[move_to_undo.square_to[0]][move_to_undo.square_to[1]] = empty_square;
+            };
         }
-        board_->piece_positions[move_to_undo.square_from[0]][move_to_undo.square_from[1]] = to_piece;
+        if (move_to_undo.taken_piece != promotion_event) {
+            board_->piece_positions[move_to_undo.square_from[0]][move_to_undo.square_from[1]] = to_piece;
+        } else {
+            board_->piece_positions[move_to_undo.square_from[0]][move_to_undo.square_from[1]] = is_white(to_piece) ? white_pawn : black_pawn;
+        };
     };
 };
 
