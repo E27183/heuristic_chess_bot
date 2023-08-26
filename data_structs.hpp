@@ -9,6 +9,8 @@ struct move_internal {
     char square_from[2];
     char square_to[2];
     char taken_piece; // Edge case: this is defined differently for pawns captured by en passant
+    char turns_since_capture_or_advance;  // Tracks turns since pawn advance of capture for 50 move rule
+    char flags; // Specifies if it's still possible to  castle and if en passant is possible this turn
 };
 
 const char en_passant_event = 31;
@@ -21,15 +23,11 @@ struct move {
 
 struct board {
     char piece_positions[8][8]; // The piece on each square of the current board
-    char flags; // Specifies if it's still possible to  castle and if en passant is possible this turn
-    char en_passant_column; // If en passant is possible, specifies the column the pawn to be taken is on
-    float alpha; // Alpha value for alpha-beta pruning
-    float beta; // Beta value for alpha-beta pruning
+    bool white_to_move;
     move_internal trace[2048]; // The moves that occurred in the game until now
     short move; // Moves the have occurred
     bool drawn; // Easy identifier for the game being drawn due to reaching the same position for the third time
-    char turns_since_capture_or_advance; // Tracks turns since pawn advance of capture for 50 move rule
-    std::unordered_map<std::size_t, char> * past_positions; // Stores previous positions for the 3 check rule
+    std::unordered_map<std::size_t, char> past_positions; // Stores previous positions for the 3 check rule
 };
 
 const char white_castle_short = 1;
@@ -39,6 +37,8 @@ const char black_castle_short = 8;
 const char black_castle_long = 16;
 
 const char white_king_castle_row = 0;
+const char long_castle_to_clean_col = 0;
+const char short_castle_to_clean_col = 7;
 const char black_king_castle_row = 7;
 const char white_pawn_double_advance_row = 1;
 const char black_pawn_double_advance_row = 6;
@@ -99,16 +99,14 @@ char internal_to_printed(char in) {
 
 void print_board(board * board_) {
     printf("flags: %d\n"
-    "alpha: %f\n"
-    "beta: %f\n"
+    "white move: %d\n"
     "move: %d\n"
     "50_move_rule: %d\n"
-    "en_passant_column: %d\n"
-    "moves: [", board_->flags, board_->alpha,
-    board_->beta, board_->move, board_->turns_since_capture_or_advance,
-    board_->en_passant_column);
+    "moves: [", board_->move == 0 ? 0 : board_->trace[board_->move - 1].turns_since_capture_or_advance, board_->white_to_move,
+    board_->move, board_->move == 0 ? 0 : board_->trace[board_->move - 1].turns_since_capture_or_advance);
     for (int i = 0; i < board_->move; i++) {
-        printf("%d-%d | %d-%d | %d, ", board_->trace[i].square_from[0],
+        printf("%d-%d | %d-%d | %d, ", 
+        board_->trace[i].square_from[0],
         board_->trace[i].square_from[1],
         board_->trace[i].square_to[0],
         board_->trace[i].square_to[1],
