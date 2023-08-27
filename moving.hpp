@@ -9,7 +9,7 @@ void init_board(board * unset) {
     unset->move = 0;
     unset->drawn = false;
     unset->white_to_move = true;
-    char init[8][8] = {
+    short init[8][8] = {
         {white_rook, white_pawn, empty_square, empty_square, empty_square, empty_square, black_pawn, black_rook},
         {white_knight, white_pawn, empty_square, empty_square, empty_square, empty_square, black_pawn, black_knight},
         {white_bishop, white_pawn, empty_square, empty_square, empty_square, empty_square, black_pawn, black_bishop},
@@ -26,9 +26,9 @@ void init_board(board * unset) {
     };
 };
 
-void make_move(move * move_, board * board_, char promotion_target = 0) { // Does not check legality, please check move is legal before calling this to avoid undefined behaviour
-    char from_piece = board_->piece_positions[move_->square_from[0]][move_->square_from[1]];
-    char to_piece = board_->piece_positions[move_->square_to[0]][move_->square_to[1]];
+void make_move(move * move_, board * board_, short promotion_target = 0) { // Does not check legality, please check move is legal before calling this to avoid undefined behaviour
+    short from_piece = board_->piece_positions[move_->square_from[0]][move_->square_from[1]];
+    short to_piece = board_->piece_positions[move_->square_to[0]][move_->square_to[1]];
     move_internal current_move = {
         square_from: {move_->square_from[0], move_->square_from[1]},
         square_to: {move_->square_to[0], move_->square_to[1]},
@@ -117,11 +117,11 @@ void make_move(move * move_, board * board_, char promotion_target = 0) { // Doe
     };
 };
 
-bool is_in_bounds(char location[2]) {
+bool is_in_bounds(short location[2]) {
     return location[0] >= 0 && location[0] < 8 && location[1] >= 0 && location[1] < 8;
 };
 
-void scan_for_king(board * board_, bool white, char return_buffer[2]) {
+void scan_for_king(board * board_, bool white, short return_buffer[2]) {
     if (white) {
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
@@ -145,34 +145,435 @@ void scan_for_king(board * board_, bool white, char return_buffer[2]) {
     };
 };
 
-bool is_checked_as_white(board * board_) {
-    char king_position[2];
-    scan_for_king(board_, true, king_position);
+bool is_checked_excluding_vector_travelstyle_pieces(board * board_, bool white, short king_position[2]) {
+    short own_king = white ? white_king : black_king;
+    short opp_king = white ? black_king : white_king;
+    short opp_knight = white ? black_knight : white_knight;
+    short opp_pawn = white ? black_pawn : white_pawn;
     for (int i = 0; i < 8; i++) { // Checked by knight?
-        char target[2] = {king_position[0] + knight_ranges[i][0], king_position[1] + knight_ranges[i][1]};
-        if (is_in_bounds(target) && board_->piece_positions[target[0]][target[1]] == black_knight) {
+        short target[2] = {static_cast<short>(king_position[0] + knight_ranges[i][0]), static_cast<short>(king_position[1] + knight_ranges[i][1])};
+        if (is_in_bounds(target) && board_->piece_positions[target[0]][target[1]] == opp_knight) {
             return true;
         };
     };
     for (int i = 0; i < 8; i++) { // Checked by king?
-        char target[2] = {king_position[0] + king_ranges[i][0], king_position[1] + king_ranges[i][1]};
-        if (is_in_bounds(target) && board_->piece_positions[target[0]][target[1]] == black_king) {
+        short target[2] = {static_cast<short>(king_position[0] + king_ranges[i][0]), static_cast<short>(king_position[1] + king_ranges[i][1])};
+        if (is_in_bounds(target) && board_->piece_positions[target[0]][target[1]] == opp_king) {
             return true;
+        };
+    };
+    if (white) { // Checked by pawn?
+        for (int i = 0; i < 2; i++) {
+            short target[2] = {static_cast<short>(king_position[0] + white_pawn_capture_ranges[i][0]), static_cast<short>(king_position[1] + white_pawn_capture_ranges[i][1])}; // Using white to search for black pawns is correct here, as they are perfectly assymetric and we are looking from the perspective of the attacked piece
+            if (is_in_bounds(target) && board_->piece_positions[target[0]][target[1]] == opp_pawn) {
+              return true;
+            };
+        };
+    } else {
+        for (int i = 0; i < 2; i++) {
+            short target[2] = {static_cast<short>(king_position[0] + black_pawn_capture_ranges[i][0]), static_cast<short>(king_position[1] + black_pawn_capture_ranges[i][1])};
+            if (is_in_bounds(target) && board_->piece_positions[target[0]][target[1]] == opp_pawn) {
+              return true;
+            };
         };
     };
     return false;
 };
 
-bool is_checked_as_black(board * board_) {
-    return false;
-};
-
 bool is_checked(board * board_, bool white) {
-    return white ? is_checked_as_white(board_) : is_checked_as_black(board_);
+    short own_king = white ? white_king : black_king;
+    short opp_rook = white ? black_rook : white_rook;
+    short opp_bishop = white ? black_bishop : white_bishop;
+    short opp_queen = white ? black_queen : white_queen;
+    short king_position[2];
+    scan_for_king(board_, white, king_position);
+    if (is_checked_excluding_vector_travelstyle_pieces(board_, white, king_position)) {
+        return true;
+    };
+    for (int i = king_position[0] + 1; i < 8; i++) { // Checked from right?
+        short piece = board_->piece_positions[i][king_position[1]];
+        if (piece != empty_square) {
+            if (piece == opp_rook || piece == opp_queen) {
+                return true;
+            } else {
+                break;
+            };
+        };
+    };
+    for (int i = king_position[0] - 1; i >= 0; i--) { // Checked from left?
+        short piece = board_->piece_positions[i][king_position[1]];
+        if (piece != empty_square) {
+            if (piece == opp_rook || piece == opp_queen) {
+                return true;
+            } else {
+                break;
+            };
+        };
+    };
+    for (int i = king_position[1] + 1; i < 8; i++) { // Checked from up?
+        short piece = board_->piece_positions[king_position[0]][i];
+        if (piece != empty_square) {
+            if (piece == opp_rook || piece == opp_queen) {
+                return true;
+            } else {
+                break;
+            };
+        };
+    };
+    for (int i = king_position[1] - 1; i >= 0; i--) { // Checked from down?
+        short piece = board_->piece_positions[king_position[0]][i];
+        if (piece != empty_square) {
+            if (piece == opp_rook || piece == opp_queen) {
+                return true;
+            } else {
+                break;
+            };
+        };
+    };
+    for (int i = 1; true; i++) { // Checked from top-right?
+        short target[2] = {static_cast<short>(king_position[0] + i), static_cast<short>(king_position[1] + i)};
+        if (!is_in_bounds(target)) {
+            break;
+        };
+        short piece = board_->piece_positions[target[0]][target[1]];
+        if (piece != empty_square) {
+            if (piece == opp_bishop || piece == opp_queen) {
+                return true;
+            } else {
+                break;
+            };
+        };
+    };
+    for (int i = 1; true; i++) { // Checked from top-left?
+        short target[2] = {static_cast<short>(king_position[0] + i), static_cast<short>(king_position[1] - i)};
+        if (!is_in_bounds(target)) {
+            break;
+        };
+        short piece = board_->piece_positions[target[0]][target[1]];
+        if (piece != empty_square) {
+            if (piece == opp_bishop || piece == opp_queen) {
+                return true;
+            } else {
+                break;
+            };
+        };
+    };
+    for (short i = 1; true; i++) { // Checked from bottom-right?
+        short target[2] = {static_cast<short>(king_position[0] - i), static_cast<short>(king_position[1] + i)};
+        if (!is_in_bounds(target)) {
+            break;
+        };
+        short piece = board_->piece_positions[target[0]][target[1]];
+        if (piece != empty_square) {
+            if (piece == opp_bishop || piece == opp_queen) {
+                return true;
+            } else {
+                break;
+            };
+        };
+    };
+    for (int i = 1; true; i++) { // Checked from bottom-left?
+        short target[2] = {static_cast<short>(king_position[0] - i), static_cast<short>(king_position[1] - i)};
+        if (!is_in_bounds(target)) {
+            break;
+        };
+        short piece = board_->piece_positions[target[0]][target[1]];
+        if (piece != empty_square) {
+            if (piece == opp_bishop || piece == opp_queen) {
+                return true;
+            } else {
+                break;
+            };
+        };
+    };
+    return false;
 };
 
-bool is_checked_and_identify_pins(board * board_) {
-    return false;
+void has_checks_excluding_vector_travelstyle_pieces(board * board_, bool white, short king_position[2], check_and_pin_feedback * feedback) { 
+    short own_king = white ? white_king : black_king;
+    short opp_king = white ? black_king : white_king;
+    short opp_knight = white ? black_knight : white_knight;
+    short opp_pawn = white ? black_pawn : white_pawn;
+    for (int i = 0; i < 8; i++) { // Checked by knight?
+        short target[2] = {static_cast<short>(king_position[0] + knight_ranges[i][0]), static_cast<short>(king_position[1] + knight_ranges[i][1])};
+        if (is_in_bounds(target) && board_->piece_positions[target[0]][target[1]] == opp_knight) {
+            if (feedback->checks == 0) {
+                feedback->checks == 1;
+                feedback->valid_squares.insert(target[0] << 6 + target[1]);
+            } else {
+                feedback->checks = 2;
+                return;
+            };
+        };
+    };
+    for (int i = 0; i < 8; i++) { // Checked by king?
+        short target[2] = {static_cast<short>(king_position[0] + king_ranges[i][0]), static_cast<short>(king_position[1] + king_ranges[i][1])};
+        if (is_in_bounds(target) && board_->piece_positions[target[0]][target[1]] == opp_king) {
+            if (feedback->checks == 0) {
+                feedback->checks == 1;
+                feedback->valid_squares.insert(target[0] << 6 + target[1]);
+            } else {
+                feedback->checks = 2;
+                return;
+            };
+        };
+    };
+    if (white) { // Checked by pawn?
+        for (int i = 0; i < 2; i++) {
+            short target[2] = {static_cast<short>(king_position[0] + white_pawn_capture_ranges[i][0]), static_cast<short>(king_position[1] + white_pawn_capture_ranges[i][1])}; // Using white to search for black pawns is correct here, as they are perfectly assymetric and we are looking from the perspective of the attacked piece
+            if (is_in_bounds(target) && board_->piece_positions[target[0]][target[1]] == opp_pawn) {
+            if (feedback->checks == 0) {
+                feedback->checks == 1;
+                feedback->valid_squares.insert(target[0] << 6 + target[1]);
+            } else {
+                feedback->checks = 2;
+                return;
+            };
+            };
+        };
+    } else {
+        for (int i = 0; i < 2; i++) {
+            short target[2] = {static_cast<short>(king_position[0] + black_pawn_capture_ranges[i][0]), static_cast<short>(king_position[1] + black_pawn_capture_ranges[i][1])};
+            if (is_in_bounds(target) && board_->piece_positions[target[0]][target[1]] == opp_pawn) {
+            if (feedback->checks == 0) {
+                feedback->checks == 1;
+                feedback->valid_squares.insert(target[0] << 6 + target[1]);
+            } else {
+                feedback->checks = 2;
+                return;
+            };
+            };
+        };
+    };
+};
+
+void is_checked_and_identify_pins_and_freedoms(board * board_, bool white, check_and_pin_feedback * feedback) { // As well as determining if a direct check exists, determine where can be moved to stop the direct check and if any pieces are pinned by threats
+    short own_king = white ? white_king : black_king;
+    short opp_rook = white ? black_rook : white_rook;
+    short opp_bishop = white ? black_bishop : white_bishop;
+    short opp_queen = white ? black_queen : white_queen;
+    short king_position[2];
+    scan_for_king(board_, white, king_position);
+    has_checks_excluding_vector_travelstyle_pieces(board_, white, king_position, feedback);
+    if (feedback->checks > 1) {
+        return;
+    };
+    short pinned_piece = empty_square;
+    for (int i = king_position[0] + 1; i < 8; i++) { // Checked from right?
+        short piece = board_->piece_positions[i][king_position[1]];
+        if (piece != empty_square) {
+            if (piece == opp_rook || piece == opp_queen) {
+                if (pinned_piece != empty_square) {
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].location[0] = i;
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].location[1] = king_position[1];
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].direction = left_right;
+                } else if (feedback->checks > 0) {
+                    feedback->checks = 2;
+                    return;
+                } else {
+                    feedback->checks++;
+                    for (int j = king_position[0] + 1; j <= i; j++) {
+                        feedback->valid_squares.insert(static_cast<short>(j) << 6 + king_position[1]);                        
+                    };
+                };
+            } else if (pinned_piece == empty_square && is_white(piece) == white) {
+                pinned_piece = piece;
+            } else {
+                break;
+            };
+        };
+    };
+    pinned_piece = empty_square;
+    for (int i = king_position[0] - 1; i >= 0; i--) { // Checked from left?
+        short piece = board_->piece_positions[i][king_position[1]];
+        if (piece != empty_square) {
+            if (piece == opp_rook || piece == opp_queen) {
+                if (pinned_piece != empty_square) {
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].location[0] = i;
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].location[1] = king_position[1];
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].direction = left_right;
+                } else if (feedback->checks > 0) {
+                    feedback->checks = 2;
+                    return;
+                } else {
+                    feedback->checks++;
+                    for (int j = king_position[0] - 1; j >= i; j--) {
+                        feedback->valid_squares.insert(static_cast<short>(j) << 6 + king_position[1]);                        
+                    };
+                };
+            } else if (pinned_piece == empty_square && is_white(piece) == white) {
+                pinned_piece = piece;
+            } else {
+                break;
+            };
+        };
+    };
+    pinned_piece = empty_square;
+    for (int i = king_position[1] + 1; i < 8; i++) { // Checked from up?
+        short piece = board_->piece_positions[king_position[0]][i];
+        if (piece != empty_square) {
+            if (piece == opp_rook || piece == opp_queen) {
+                if (pinned_piece != empty_square) {
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].location[0] = king_position[0];
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].location[1] = i;
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].direction = up_down;
+                } else if (feedback->checks > 0) {
+                    feedback->checks = 2;
+                    return;
+                } else {
+                    feedback->checks++;
+                    for (int j = king_position[1] + 1; j <= i; j++) {
+                        feedback->valid_squares.insert(king_position[0] << 6 + static_cast<short>(j));                        
+                    };
+                };
+            } else if (pinned_piece == empty_square && is_white(piece) == white) {
+                pinned_piece = piece;
+            } else {
+                break;
+            };
+        };
+    };
+    pinned_piece = empty_square;
+    for (int i = king_position[1] - 1; i >= 0; i--) { // Checked from down?
+        short piece = board_->piece_positions[king_position[0]][i];
+        if (piece != empty_square) {
+            if (piece == opp_rook || piece == opp_queen) {
+                if (pinned_piece != empty_square) {
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].location[0] = king_position[0];
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].location[1] = i;
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].direction = up_down;
+                } else if (feedback->checks > 0) {
+                    feedback->checks = 2;
+                    return;
+                } else {
+                    feedback->checks++;
+                    for (int j = king_position[1] - 1; j >= i; j--) {
+                        feedback->valid_squares.insert(king_position[0] << 6 + static_cast<short>(j));                        
+                    };
+                };
+            } else if (pinned_piece == empty_square && is_white(piece) == white) {
+                pinned_piece = piece;
+            } else {
+                break;
+            };
+        };
+    };
+    pinned_piece = empty_square;
+    for (int i = 1; true; i++) { // Checked from top-right?
+        short target[2] = {static_cast<short>(king_position[0] + i), static_cast<short>(king_position[1] + i)};
+        if (!is_in_bounds(target)) {
+            break;
+        };
+        short piece = board_->piece_positions[target[0]][target[1]];
+        if (piece != empty_square) {
+            if (piece == opp_bishop || piece == opp_queen) {
+                if (pinned_piece != empty_square) {
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].location[0] = target[0];
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].location[1] = target[1];
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].direction = ascending;
+                } else if (feedback->checks > 0) {
+                    feedback->checks = 2;
+                    return;
+                } else {
+                    feedback->checks++;
+                    for (int j = 1; j <= i; j++) {
+                        feedback->valid_squares.insert(static_cast<short>(king_position[0] + j) << 6 + static_cast<short>(king_position[1] + j));                        
+                    };
+                };
+            } else if (pinned_piece == empty_square && is_white(piece) == white) {
+                pinned_piece = piece;
+            } else {
+                break;
+            };
+        };
+    };
+    pinned_piece = empty_square;
+    for (int i = 1; true; i++) { // Checked from top-left?
+        short target[2] = {static_cast<short>(king_position[0] + i), static_cast<short>(king_position[1] - i)};
+        if (!is_in_bounds(target)) {
+            break;
+        };
+        short piece = board_->piece_positions[target[0]][target[1]];
+        if (piece != empty_square) {
+            if (piece == opp_bishop || piece == opp_queen) {
+                if (pinned_piece != empty_square) {
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].location[0] = target[0];
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].location[1] = target[1];
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].direction = descending;
+                } else if (feedback->checks > 0) {
+                    feedback->checks = 2;
+                    return;
+                } else {
+                    feedback->checks++;
+                    for (int j = 1; j <= i; j++) {
+                        feedback->valid_squares.insert(static_cast<short>(king_position[0] + j) << 6 + static_cast<short>(king_position[1] - j));                        
+                    };
+                };
+            } else if (pinned_piece == empty_square && is_white(piece) == white) {
+                pinned_piece = piece;
+            } else {
+                break;
+            };
+        };
+    };
+    pinned_piece = empty_square;
+    for (int i = 1; true; i++) { // Checked from bottom-right?
+        short target[2] = {static_cast<short>(king_position[0] - i), static_cast<short>(king_position[1] + i)};
+        if (!is_in_bounds(target)) {
+            break;
+        };
+        short piece = board_->piece_positions[target[0]][target[1]];
+        if (piece != empty_square) {
+            if (piece == opp_bishop || piece == opp_queen) {
+                if (pinned_piece != empty_square) {
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].location[0] = target[0];
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].location[1] = target[1];
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].direction = descending;
+                } else if (feedback->checks > 0) {
+                    feedback->checks = 2;
+                    return;
+                } else {
+                    feedback->checks++;
+                    for (int j = 1; j <= i; j++) {
+                        feedback->valid_squares.insert(static_cast<short>(king_position[0] - j) << 6 + static_cast<short>(king_position[1] + j));                        
+                    };
+                };
+            } else if (pinned_piece == empty_square && is_white(piece) == white) {
+                pinned_piece = piece;
+            } else {
+                break;
+            };
+        };
+    };
+    pinned_piece = empty_square;
+    for (int i = 1; true; i++) { // Checked from bottom-left?
+        short target[2] = {static_cast<short>(king_position[0] - i), static_cast<short>(king_position[1] - i)};
+        if (!is_in_bounds(target)) {
+            break;
+        };
+        short piece = board_->piece_positions[target[0]][target[1]];
+        if (piece != empty_square) {
+            if (piece == opp_bishop || piece == opp_queen) {
+                if (pinned_piece != empty_square) {
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].location[0] = target[0];
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].location[1] = target[1];
+                    feedback->pinned_pieces[feedback->pinned_pieces_count].direction = ascending;
+                } else if (feedback->checks > 0) {
+                    feedback->checks = 2;
+                    return;
+                } else {
+                    feedback->checks++;
+                    for (int j = 1; j <= i; j++) {
+                        feedback->valid_squares.insert(static_cast<short>(king_position[0] - j) << 6 + static_cast<short>(king_position[1] - j));                        
+                    };
+                };
+            } else if (pinned_piece == empty_square && is_white(piece) == white) {
+                pinned_piece = piece;
+            } else {
+                break;
+            };
+        };
+    };
 };
 
 
@@ -211,7 +612,7 @@ void reset_recent_move(board * board_) {
             };
         };
     } else {
-        const char to_piece = board_->piece_positions[move_to_undo.square_to[0]][move_to_undo.square_to[1]];
+        const short to_piece = board_->piece_positions[move_to_undo.square_to[0]][move_to_undo.square_to[1]];
         if (move_to_undo.taken_piece == en_passant_event) {
             if (to_piece == white_pawn) {
                 board_->piece_positions[move_to_undo.square_to[0]][move_to_undo.square_to[1] - 1] = black_pawn;
