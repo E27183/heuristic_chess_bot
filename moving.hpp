@@ -298,8 +298,8 @@ void has_checks_excluding_vector_travelstyle_pieces(board * board_, bool white, 
         short target[2] = {static_cast<short>(king_position[0] + knight_ranges[i][0]), static_cast<short>(king_position[1] + knight_ranges[i][1])};
         if (is_in_bounds(target) && board_->piece_positions[target[0]][target[1]] == opp_knight) {
             if (feedback->checks == 0) {
-                feedback->checks == 1;
-                feedback->valid_squares.insert(target[0] << 6 + target[1]);
+                feedback->checks = 1;
+                feedback->valid_squares.insert((target[0] << 6) + target[1]);
             } else {
                 feedback->checks = 2;
                 return;
@@ -310,8 +310,8 @@ void has_checks_excluding_vector_travelstyle_pieces(board * board_, bool white, 
         short target[2] = {static_cast<short>(king_position[0] + king_ranges[i][0]), static_cast<short>(king_position[1] + king_ranges[i][1])};
         if (is_in_bounds(target) && board_->piece_positions[target[0]][target[1]] == opp_king) {
             if (feedback->checks == 0) {
-                feedback->checks == 1;
-                feedback->valid_squares.insert(target[0] << 6 + target[1]);
+                feedback->checks = 1;
+                feedback->valid_squares.insert((target[0] << 6) + target[1]);
             } else {
                 feedback->checks = 2;
                 return;
@@ -322,26 +322,26 @@ void has_checks_excluding_vector_travelstyle_pieces(board * board_, bool white, 
         for (int i = 0; i < 2; i++) {
             short target[2] = {static_cast<short>(king_position[0] + white_pawn_capture_ranges[i][0]), static_cast<short>(king_position[1] + white_pawn_capture_ranges[i][1])}; // Using white to search for black pawns is correct here, as they are perfectly assymetric and we are looking from the perspective of the attacked piece
             if (is_in_bounds(target) && board_->piece_positions[target[0]][target[1]] == opp_pawn) {
-            if (feedback->checks == 0) {
-                feedback->checks == 1;
-                feedback->valid_squares.insert(target[0] << 6 + target[1]);
-            } else {
-                feedback->checks = 2;
-                return;
-            };
+                if (feedback->checks == 0) {
+                    feedback->checks = 1;
+                    feedback->valid_squares.insert((target[0] << 6) + target[1]);
+                } else {
+                    feedback->checks = 2;
+                    return;
+                };
             };
         };
     } else {
         for (int i = 0; i < 2; i++) {
             short target[2] = {static_cast<short>(king_position[0] + black_pawn_capture_ranges[i][0]), static_cast<short>(king_position[1] + black_pawn_capture_ranges[i][1])};
             if (is_in_bounds(target) && board_->piece_positions[target[0]][target[1]] == opp_pawn) {
-            if (feedback->checks == 0) {
-                feedback->checks == 1;
-                feedback->valid_squares.insert(target[0] << 6 + target[1]);
-            } else {
-                feedback->checks = 2;
-                return;
-            };
+                if (feedback->checks == 0) {
+                    feedback->checks = 1;
+                    feedback->valid_squares.insert((target[0] << 6) + target[1]);
+                } else {
+                    feedback->checks = 2;
+                    return;
+                };
             };
         };
     };
@@ -373,7 +373,7 @@ void is_checked_and_identify_pins_and_freedoms(board * board_, bool white, check
                 } else {
                     feedback->checks++;
                     for (int j = king_position[0] + 1; j <= i; j++) {
-                        feedback->valid_squares.insert(static_cast<short>(j) << 6 + king_position[1]);                        
+                        feedback->valid_squares.insert((static_cast<short>(j) << 6) + king_position[1]);                        
                     };
                 };
             } else if (pinned_piece == empty_square && is_white(piece) == white) {
@@ -398,7 +398,7 @@ void is_checked_and_identify_pins_and_freedoms(board * board_, bool white, check
                 } else {
                     feedback->checks++;
                     for (int j = king_position[0] - 1; j >= i; j--) {
-                        feedback->valid_squares.insert(static_cast<short>(j) << 6 + king_position[1]);                        
+                        feedback->valid_squares.insert((static_cast<short>(j) << 6) + king_position[1]);                        
                     };
                 };
             } else if (pinned_piece == empty_square && is_white(piece) == white) {
@@ -423,7 +423,7 @@ void is_checked_and_identify_pins_and_freedoms(board * board_, bool white, check
                 } else {
                     feedback->checks++;
                     for (int j = king_position[1] + 1; j <= i; j++) {
-                        feedback->valid_squares.insert(king_position[0] << 6 + static_cast<short>(j));                        
+                        feedback->valid_squares.insert((king_position[0] << 6) + static_cast<short>(j));                        
                     };
                 };
             } else if (pinned_piece == empty_square && is_white(piece) == white) {
@@ -448,7 +448,7 @@ void is_checked_and_identify_pins_and_freedoms(board * board_, bool white, check
                 } else {
                     feedback->checks++;
                     for (int j = king_position[1] - 1; j >= i; j--) {
-                        feedback->valid_squares.insert(king_position[0] << 6 + static_cast<short>(j));                        
+                        feedback->valid_squares.insert((king_position[0] << 6) + static_cast<short>(j));                        
                     };
                 };
             } else if (pinned_piece == empty_square && is_white(piece) == white) {
@@ -477,7 +477,7 @@ void is_checked_and_identify_pins_and_freedoms(board * board_, bool white, check
                 } else {
                     feedback->checks++;
                     for (int j = 1; j <= i; j++) {
-                        feedback->valid_squares.insert(static_cast<short>(king_position[0] + j) << 6 + static_cast<short>(king_position[1] + j));                        
+                        feedback->valid_squares.insert((static_cast<short>(king_position[0] + j) << 6) + static_cast<short>(king_position[1] + j));                        
                     };
                 };
             } else if (pinned_piece == empty_square && is_white(piece) == white) {
@@ -506,7 +506,7 @@ void is_checked_and_identify_pins_and_freedoms(board * board_, bool white, check
                 } else {
                     feedback->checks++;
                     for (int j = 1; j <= i; j++) {
-                        feedback->valid_squares.insert(static_cast<short>(king_position[0] + j) << 6 + static_cast<short>(king_position[1] - j));                        
+                        feedback->valid_squares.insert((static_cast<short>(king_position[0] + j) << 6) + static_cast<short>(king_position[1] - j));                        
                     };
                 };
             } else if (pinned_piece == empty_square && is_white(piece) == white) {
@@ -535,7 +535,7 @@ void is_checked_and_identify_pins_and_freedoms(board * board_, bool white, check
                 } else {
                     feedback->checks++;
                     for (int j = 1; j <= i; j++) {
-                        feedback->valid_squares.insert(static_cast<short>(king_position[0] - j) << 6 + static_cast<short>(king_position[1] + j));                        
+                        feedback->valid_squares.insert((static_cast<short>(king_position[0] - j) << 6) + static_cast<short>(king_position[1] + j));                        
                     };
                 };
             } else if (pinned_piece == empty_square && is_white(piece) == white) {
@@ -564,7 +564,7 @@ void is_checked_and_identify_pins_and_freedoms(board * board_, bool white, check
                 } else {
                     feedback->checks++;
                     for (int j = 1; j <= i; j++) {
-                        feedback->valid_squares.insert(static_cast<short>(king_position[0] - j) << 6 + static_cast<short>(king_position[1] - j));                        
+                        feedback->valid_squares.insert((static_cast<short>(king_position[0] - j) << 6) + static_cast<short>(king_position[1] - j));                        
                     };
                 };
             } else if (pinned_piece == empty_square && is_white(piece) == white) {

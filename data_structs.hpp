@@ -21,7 +21,6 @@ struct pinned_piece {
 
 struct check_and_pin_feedback {
     short checks; // If this is 2 or more, the number may not be accurate but enough to determine the king must move
-    short checker_location[2]; // Only defined if there is exactly one check
     std::unordered_set<short> valid_squares; // Squares that can be moved to to block the check, defined as 64 * row + col, or row << 6 + col
     pinned_piece pinned_pieces[most_pins_possible]; // All pieces pinned
     short pinned_pieces_count; // Amount of pieces pinned
