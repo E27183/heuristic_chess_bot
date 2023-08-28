@@ -18,8 +18,8 @@ int main() {
     // reset_recent_move(&board_);
     // reset_recent_move(&board_);
     // printf("%d", *std::begin(feedback.valid_squares));
-    printf("%s", feedback.valid_squares.count(7) ? "7" : "nah");
-    printf("%s", feedback.valid_squares.count(0) ? "0" : "nah");
+    // printf("%s", feedback.valid_squares.count(7) ? "7" : "nah");
+    // printf("%s", feedback.valid_squares.count(0) ? "0" : "nah");
     // print_board(&board_);
     return 0;
 };

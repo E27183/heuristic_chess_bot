@@ -635,4 +635,285 @@ void reset_recent_move(board * board_) {
     };
 };
 
+bool is_saving(move * move_, check_and_pin_feedback * feedback) { // Returns true unless a move fails to block a check or creates a new check. Does not account for double checks and should not be passed this situation
+    for (int i = 0; i < feedback->pinned_pieces_count; i++) {
+        if (feedback->pinned_pieces[i].location[0] == move_->square_from[0] && feedback->pinned_pieces[i].location[1] == move_->square_from[1]) {
+            if (feedback->pinned_pieces[i].direction == up_down && move_->square_from[0] != move_->square_to[0]) {
+                return false;
+            };
+            if (feedback->pinned_pieces[i].direction == left_right && move_->square_from[1] != move_->square_to[1]) {
+                return false;
+            };
+            if (feedback->pinned_pieces[i].direction == ascending && move_->square_from[0] - move_->square_to[0] != move_->square_from[1] - move_->square_to[1]) {
+                return false;
+            };
+            if (feedback->pinned_pieces[i].direction == descending && move_->square_from[0] - move_->square_to[0] != move_->square_to[1] - move_->square_from[1]) {
+                return false;
+            };
+            break;
+        };
+    };
+    return feedback->checks == 0 || feedback->valid_squares.count(static_cast<short>(move_->square_to[0] << 6) + move_->square_to[1]);
+};
+
+bool valid_move(move * move_, board * board_, check_and_pin_feedback * feedback) {
+    if (!is_in_bounds(move_->square_from) || !is_in_bounds(move_->square_to)) {
+        return false;
+    };
+    if (move_->square_from[0] == move_->square_to[0] && move_->square_from[1] == move_->square_to[1]) {
+        return false;
+    };
+    short piece_to_move = board_->piece_positions[move_->square_from[0]][move_->square_from[1]];
+    short piece_to_land = board_->piece_positions[move_->square_to[0]][move_->square_to[1]];
+    if (piece_to_move == empty_square || is_white(piece_to_move) != board_->white_to_move) {
+        return false;
+    };
+    if (piece_to_land != empty_square || is_white(piece_to_land) == is_white(piece_to_move)) {
+        return false;
+    };
+    short own_king = board_->white_to_move ? white_king : black_king;
+    short own_rook = board_->white_to_move ? white_rook : black_rook;
+    short own_knight = board_->white_to_move ? white_knight : black_knight;
+    short own_bishop = board_->white_to_move ? white_bishop : black_bishop;
+    short own_queen = board_->white_to_move ? white_queen : black_queen;
+    short own_pawn = board_->white_to_move ? white_pawn : black_pawn;
+    if (piece_to_move == own_king) {} else {
+        if (feedback->checks > 1) {
+            return false;
+        };
+        if (piece_to_move == own_rook) {
+            if (move_->square_from[0] != move_->square_to[0] && move_->square_from[1] != move_->square_to[1]) {
+                return false;
+            } else if (move_->square_to[0] > move_->square_from[0]) {
+                for (int i = move_->square_from[0] + 1; i < move_->square_to[0]; i++) {
+                    if (board_->piece_positions[i][move_->square_from[1]] != empty_square) {
+                        return false;
+                    };
+                    return is_saving(move_, feedback);
+                };
+            } else if (move_->square_to[0] < move_->square_from[0]) {
+                for (int i = move_->square_from[0] - 1; i > move_->square_to[0]; i--) {
+                    if (board_->piece_positions[i][move_->square_from[1]] != empty_square) {
+                        return false;
+                    };
+                    return is_saving(move_, feedback);
+                };
+            } else if (move_->square_to[1] > move_->square_from[1]) {
+                for (int i = move_->square_from[1] + 1; i < move_->square_to[1]; i++) {
+                    if (board_->piece_positions[move_->square_from[0]][i] != empty_square) {
+                        return false;
+                    };
+                    return is_saving(move_, feedback);
+                };
+            } else {
+                for (int i = move_->square_from[1] - 1; i > move_->square_to[1]; i--) {
+                    if (board_->piece_positions[move_->square_from[0]][i] != empty_square) {
+                        return false;
+                    };
+                    return is_saving(move_, feedback);
+                };
+            };
+        } else if (piece_to_move == own_knight) {
+            if (abs(move_->square_from[0] - move_->square_to[0]) + abs(move_->square_from[1] - move_->square_to[1]) != 3) {
+                return false;
+            } else {
+                return is_saving(move_, feedback);
+            };
+        } else if (piece_to_move == own_bishop) {
+            if (abs(move_->square_from[0] - move_->square_to[0]) != abs(move_->square_from[1] - move_->square_to[1])) {
+                return false;
+            } else if (move_->square_to[0] > move_->square_from[0] && move_->square_to[1] > move_->square_to[1]) {
+                for (int i = 1; i < move_->square_to[0] - move_->square_from[0]; i++) {
+                    if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] + i] != empty_square) {
+                        return false;
+                    };
+                    return is_saving(move_, feedback);
+                };
+            } else if (move_->square_to[0] > move_->square_from[0] && move_->square_to[1] < move_->square_to[1]) {
+                for (int i = 1; i < move_->square_to[0] - move_->square_from[0]; i++) {
+                    if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] - i] != empty_square) {
+                        return false;
+                    };
+                    return is_saving(move_, feedback);
+                };
+            } else if (move_->square_to[0] < move_->square_from[0] && move_->square_to[1] > move_->square_to[1]) {
+                for (int i = -1; i > move_->square_to[0] - move_->square_from[0]; i--) {
+                    if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] - i] != empty_square) {
+                        return false;
+                    };
+                    return is_saving(move_, feedback);
+                };
+            } else {
+                for (int i = -1; i > move_->square_to[0] - move_->square_from[0]; i--) {
+                    if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] + i] != empty_square) {
+                        return false;
+                    };
+                    return is_saving(move_, feedback);
+                };
+            };
+        } else if (piece_to_move == own_queen) {
+            if ((move_->square_from[0] != move_->square_to[0] && move_->square_from[1] != move_->square_to[1]) && (abs(move_->square_from[0] - move_->square_to[0]) != abs(move_->square_from[1] - move_->square_to[1]))) {
+                return false;
+            } else if (move_->square_to[0] > move_->square_from[0] && move_->square_from[1] == move_->square_to[1]) {
+                for (int i = move_->square_from[0] + 1; i < move_->square_to[0]; i++) {
+                    if (board_->piece_positions[i][move_->square_from[1]] != empty_square) {
+                        return false;
+                    };
+                    return is_saving(move_, feedback);
+                };
+            } else if (move_->square_to[0] < move_->square_from[0] && move_->square_from[1] == move_->square_to[1]) {
+                for (int i = move_->square_from[0] - 1; i > move_->square_to[0]; i--) {
+                    if (board_->piece_positions[i][move_->square_from[1]] != empty_square) {
+                        return false;
+                    };
+                    return is_saving(move_, feedback);
+                };
+            } else if (move_->square_to[1] > move_->square_from[1] && move_->square_from[1] == move_->square_to[0]) {
+                for (int i = move_->square_from[1] + 1; i < move_->square_to[1]; i++) {
+                    if (board_->piece_positions[move_->square_from[0]][i] != empty_square) {
+                        return false;
+                    };
+                    return is_saving(move_, feedback);
+                };
+            } else if (move_->square_to[1] < move_->square_from[1] && move_->square_from[1] == move_->square_to[0]){
+                for (int i = move_->square_from[1] - 1; i > move_->square_to[1]; i--) {
+                    if (board_->piece_positions[move_->square_from[0]][i] != empty_square) {
+                        return false;
+                    };
+                    return is_saving(move_, feedback);
+                };
+            } else if (move_->square_to[0] > move_->square_from[0] && move_->square_to[1] > move_->square_to[1]) {
+                for (int i = 1; i < move_->square_to[0] - move_->square_from[0]; i++) {
+                    if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] + i] != empty_square) {
+                        return false;
+                    };
+                    return is_saving(move_, feedback);
+                };
+            } else if (move_->square_to[0] > move_->square_from[0] && move_->square_to[1] < move_->square_to[1]) {
+                for (int i = 1; i < move_->square_to[0] - move_->square_from[0]; i++) {
+                    if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] - i] != empty_square) {
+                        return false;
+                    };
+                    return is_saving(move_, feedback);
+                };
+            } else if (move_->square_to[0] < move_->square_from[0] && move_->square_to[1] > move_->square_to[1]) {
+                for (int i = -1; i > move_->square_to[0] - move_->square_from[0]; i--) {
+                    if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] - i] != empty_square) {
+                        return false;
+                    };
+                    return is_saving(move_, feedback);
+                };
+            } else {
+                for (int i = -1; i > move_->square_to[0] - move_->square_from[0]; i--) {
+                    if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] + i] != empty_square) {
+                        return false;
+                    };
+                    return is_saving(move_, feedback);
+                };
+            };
+        } else { // last case is pawn
+            if (move_->square_to[0] == move_->square_from[0]) {
+                if (piece_to_land != empty_square) {
+                    return false;
+                };
+                if (piece_to_move == white_pawn) {
+                    if (move_->square_to[1] - move_->square_from[1] == 1) {
+                        return is_saving(move_, feedback);
+                    } else if (move_->square_to[1] - move_->square_from[1] == 2 && move_->square_from[1] == white_pawn_double_advance_row && board_->piece_positions[move_->square_from[0]][move_->square_from[1] + 1] == empty_square) {
+                        return is_saving(move_, feedback);
+                    } else {
+                        return false;
+                    };
+                } else {
+                    if (move_->square_from[1] - move_->square_to[1] == 1) {
+                        return is_saving(move_, feedback);
+                    } else if (move_->square_from[1] - move_->square_to[1] == 2 && move_->square_from[1] == black_pawn_double_advance_row && board_->piece_positions[move_->square_from[0]][move_->square_from[1] - 1] == empty_square) {
+                        return is_saving(move_, feedback);
+                    } else {
+                        return false;
+                    };
+                };
+            } else {
+                if (abs(move_->square_to[0] - move_->square_from[0]) != 1) {
+                    return false;
+                };
+                if (piece_to_move == white_pawn) {
+                    if (move_->square_to[1] - move_->square_from[1] != 1) {
+                        return false;
+                    };
+                    if (piece_to_land != empty_square) {
+                        return is_saving(move_, feedback);
+                    } else {
+                        if (board_->move == 0) {
+                            return false;
+                        };
+                        move_internal last_move = board_->trace[board_->move - 1];
+                        if (last_move.flags != en_passant_event || 
+                        last_move.square_to[0] != move_->square_to[0] || 
+                        last_move.square_to[1] != move_->square_to[1] - 1) {
+                            return false;
+                        } else if (is_saving(move_, feedback)) {
+                            return true;
+                        } else {
+                            if (feedback->valid_squares.count((move_->square_to[0] << 6) + move_->square_to[1] - 1) == 0) {
+                                return false;
+                            } else {
+                                for (int  i = 0; i < feedback->pinned_pieces_count; i++) {
+                                    if (feedback->pinned_pieces[i].location[0] == move_->square_from[0] && feedback->pinned_pieces[i].location[0] == move_->square_from[0]) {
+                                        if (feedback->pinned_pieces[i].direction == ascending) {
+                                            return move_->square_to[1] - move_->square_from[1] == 1;
+                                        } else if (feedback->pinned_pieces[i].direction == descending) {
+                                            return move_->square_from[1] - move_->square_to[1] == 1;
+                                        } else {
+                                            return false;
+                                        };
+                                    };
+                                };
+                                return true;
+                            };
+                        };
+                    };
+                } else {
+                    if (move_->square_from[1] - move_->square_to[1] != 1) {
+                        return false;
+                    };
+                    if (piece_to_land != empty_square) {
+                        return is_saving(move_, feedback);
+                    } else {
+                        if (board_->move == 0) {
+                            return false;
+                        };
+                        move_internal last_move = board_->trace[board_->move - 1];
+                        if (last_move.flags != en_passant_event || 
+                        last_move.square_to[0] != move_->square_to[0] || 
+                        last_move.square_to[1] != move_->square_to[1] + 1) {
+                            return false;
+                        } else if (is_saving(move_, feedback)) {
+                            return true;
+                        } else {
+                            if (feedback->valid_squares.count((move_->square_to[0] << 6) + move_->square_to[1] + 1) == 0) {
+                                return false;
+                            } else {
+                                for (int  i = 0; i < feedback->pinned_pieces_count; i++) {
+                                    if (feedback->pinned_pieces[i].location[0] == move_->square_from[0] && feedback->pinned_pieces[i].location[0] == move_->square_from[0]) {
+                                        if (feedback->pinned_pieces[i].direction == ascending) {
+                                            return move_->square_from[1] - move_->square_to[1] == 1;
+                                        } else if (feedback->pinned_pieces[i].direction == descending) {
+                                            return move_->square_to[1] - move_->square_from[1] == 1;
+                                        } else {
+                                            return false;
+                                        };
+                                    };
+                                };
+                                return true;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+    };
+    return true;
+};
+
 #endif
