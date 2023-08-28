@@ -52,6 +52,30 @@ struct board {
     std::unordered_map<std::size_t, short> past_positions; // Stores previous positions for the 3 check rule
 };
 
+void deep_copy(board * reference, board * canvas) { // Deep copies a board onto another
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            canvas->piece_positions[i][j] = reference->piece_positions[i][j];
+        };
+    };
+    canvas->white_to_move = reference->white_to_move;
+    canvas->move = reference->move;
+    for (int i = 0; i < reference->move; i++) {
+        canvas->trace[i].flags = reference->trace[i].flags;
+        canvas->trace[i].square_from[0] = reference->trace[i].square_from[0];
+        canvas->trace[i].square_from[1] = reference->trace[i].square_from[1];
+        canvas->trace[i].square_to[0] = reference->trace[i].square_to[0];
+        canvas->trace[i].square_to[1] = reference->trace[i].square_to[1];
+        canvas->trace[i].taken_piece = reference->trace[i].taken_piece;
+        canvas->trace[i].turns_since_capture_or_advance = reference->trace[i].turns_since_capture_or_advance;
+    };
+    canvas->drawn = reference->drawn;
+    canvas->past_positions.clear();
+    for (const std::pair<std::size_t, short> & position_count : reference->past_positions) {
+        canvas->past_positions.insert(std::make_pair(position_count.first, position_count.second));
+    };
+};
+
 const short white_castle_short = 1;
 const short white_castle_long = 2;
 const short can_en_passant = 4;
