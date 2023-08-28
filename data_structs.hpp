@@ -31,7 +31,7 @@ struct move_internal {
     short square_to[2];
     short taken_piece; // Edge case: this is defined differently for pawns captured by en passant
     short turns_since_capture_or_advance;  // Tracks turns since pawn advance of capture for 50 move rule
-    short flags; // Specifies if it's still possible to  castle and if en passant is possible this turn
+    short flags; // Specifies if it's still possible to castle and if en passant is possible this turn
 };
 
 const short en_passant_event = 31;

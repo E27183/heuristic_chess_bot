@@ -354,6 +354,9 @@ void is_checked_and_identify_pins_and_freedoms(board * board_, bool white, check
     short opp_queen = white ? black_queen : white_queen;
     short king_position[2];
     scan_for_king(board_, white, king_position);
+    feedback->checks = 0;
+    feedback->pinned_pieces_count = 0;
+    feedback->valid_squares.clear();
     has_checks_excluding_vector_travelstyle_pieces(board_, white, king_position, feedback);
     if (feedback->checks > 1) {
         return;
@@ -668,7 +671,7 @@ bool valid_move(move * move_, board * board_, check_and_pin_feedback * feedback)
     if (piece_to_move == empty_square || is_white(piece_to_move) != board_->white_to_move) {
         return false;
     };
-    if (piece_to_land != empty_square || is_white(piece_to_land) == is_white(piece_to_move)) {
+    if (piece_to_land != empty_square && is_white(piece_to_land) == is_white(piece_to_move)) {
         return false;
     };
     short own_king = board_->white_to_move ? white_king : black_king;
@@ -677,7 +680,19 @@ bool valid_move(move * move_, board * board_, check_and_pin_feedback * feedback)
     short own_bishop = board_->white_to_move ? white_bishop : black_bishop;
     short own_queen = board_->white_to_move ? white_queen : black_queen;
     short own_pawn = board_->white_to_move ? white_pawn : black_pawn;
-    if (piece_to_move == own_king) {} else {
+    if (piece_to_move == own_king) {
+        if (abs(move_->square_from[0] - move_->square_to[0]) > 1 || abs(move_->square_from[1] - move_->square_to[1]) > 1) {
+            return false;
+        } else {
+            short piece_in_memory = board_->piece_positions[move_->square_to[0]][move_->square_to[1]];
+            board_->piece_positions[move_->square_to[0]][move_->square_to[1]] = own_king;
+            board_->piece_positions[move_->square_from[0]][move_->square_from[1]] = empty_square;
+            bool legal = is_checked(board_, board_->white_to_move);
+            board_->piece_positions[move_->square_to[0]][move_->square_to[1]] = piece_in_memory;
+            board_->piece_positions[move_->square_from[0]][move_->square_from[1]] = own_king;
+            return legal;
+        };
+    } else {
         if (feedback->checks > 1) {
             return false;
         };
@@ -848,7 +863,7 @@ bool valid_move(move * move_, board * board_, check_and_pin_feedback * feedback)
                             return false;
                         };
                         move_internal last_move = board_->trace[board_->move - 1];
-                        if (last_move.flags != en_passant_event || 
+                        if (!(last_move.flags & can_en_passant) || 
                         last_move.square_to[0] != move_->square_to[0] || 
                         last_move.square_to[1] != move_->square_to[1] - 1) {
                             return false;
@@ -884,7 +899,7 @@ bool valid_move(move * move_, board * board_, check_and_pin_feedback * feedback)
                             return false;
                         };
                         move_internal last_move = board_->trace[board_->move - 1];
-                        if (last_move.flags != en_passant_event || 
+                        if (!(last_move.flags & can_en_passant) || 
                         last_move.square_to[0] != move_->square_to[0] || 
                         last_move.square_to[1] != move_->square_to[1] + 1) {
                             return false;
