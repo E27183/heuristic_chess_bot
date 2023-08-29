@@ -9,7 +9,7 @@
 #include "utils.hpp"
 #include "heuristics.hpp"
 
-const unsigned int numCores = min(std::thread::hardware_concurrency(), 20);
+const unsigned int numCores = min(std::thread::hardware_concurrency(), 1);
 
 void assign_move_if_possible(board * board_, move * candidate, short to_row, short to_col, move buffer[256], short * moves_len, check_and_pin_feedback * feedback) {
     candidate->square_to[0] = to_row;
@@ -201,7 +201,66 @@ void populate_buffer_with_legal_moves(board * board_, move buffer[256], short * 
     };
 };
 
-void worker_recursive_call(board * board_, short depth, float * eval) {};
+void worker_recursive_call(board * board_, short depth, float * eval) {
+    move buffer[256];
+    *eval = board_->white_to_move ? -MAXFLOAT : MAXFLOAT;
+    short moves_found;
+    populate_buffer_with_legal_moves(board_, buffer, &moves_found);
+    if (moves_found == 0) {
+        if (is_checked(board_, board_->white_to_move)) {
+            *eval = board_->white_to_move ? -MAXFLOAT : MAXFLOAT;
+        } else {
+            *eval = 0;
+        };
+    } else {
+        for (int i = 0; i < moves_found; i++) {
+            if ((buffer[i].square_to[1] == white_promote_row && board_->piece_positions[buffer[i].square_from[0]][buffer[i].square_from[1]] == white_pawn) || 
+            (buffer[i].square_to[1] == black_promote_row && board_->piece_positions[buffer[i].square_from[0]][buffer[i].square_from[1]] == black_pawn)) {
+                if (board_->white_to_move) {
+                    for (const short &piece : promotable_white_pieces) {
+                        make_move(&buffer[i], board_, piece);
+                        float eval_local;
+                        if (depth == 0) {
+                            eval_local = applied_heuristic(board_);
+                        } else {
+                            worker_recursive_call(board_, depth - 1, &eval_local);
+                        };
+                        if ((eval_local > *eval && board_->white_to_move) || (eval_local < *eval && !board_->white_to_move)) { 
+                            *eval = eval_local;
+                        };
+                        reset_recent_move(board_);
+                    };
+                } else {
+                    for (const short &piece : promotable_black_pieces) {
+                        make_move(&buffer[i], board_, piece);
+                        float eval_local;
+                        if (depth == 0) {
+                            eval_local = applied_heuristic(board_);
+                        } else {
+                            worker_recursive_call(board_, depth - 1, &eval_local);
+                        };
+                        if ((eval_local > *eval && !board_->white_to_move) || (eval_local < *eval && board_->white_to_move)) { // Is reversed as board being white to move on core board means most recent move was made by black
+                            *eval = eval_local;
+                        };
+                        reset_recent_move(board_);
+                    };
+                };
+            } else {
+                make_move(&buffer[i], board_);
+                float eval_local;
+                if (depth == 0) {
+                    eval_local = applied_heuristic(board_);
+                } else {
+                    worker_recursive_call(board_, depth - 1, &eval_local);
+                };
+                if ((eval_local > *eval && !board_->white_to_move) || (eval_local < *eval && board_->white_to_move)) { // Is reversed as board being white to move on core board means most recent move was made by black
+                    *eval = eval_local;
+                };
+                reset_recent_move(board_);
+            };
+        };
+    };
+};
 
 void worker_thread(board * board_, std::mutex * access_lock, short moves_len, short * current_move_index, short depth, move buffer_orig[256], short * best_move_index, short * best_move_eval, std::mutex * best_move_lock) {
     board my_local_board;
@@ -220,7 +279,7 @@ void worker_thread(board * board_, std::mutex * access_lock, short moves_len, sh
             access_lock->unlock();
         };
         make_move(&buffer_orig[index_this_cycle], &my_local_board);
-        float eval_of_this_move = board_->white_to_move ? -MAXFLOAT : MAXFLOAT;
+        float eval_of_this_move = my_local_board.white_to_move ? -MAXFLOAT : MAXFLOAT;
         moves_found = 0;
         populate_buffer_with_legal_moves(&my_local_board, buffer, &moves_found);
         if (moves_found == 0) {
@@ -307,7 +366,10 @@ void search_for_best_move(board * board_, move * output_move, short * output_pro
     for (std::thread &thread : workers) {
         thread.join();
     };
-    std::cout << "is fin";
+    output_move->square_from[0] = buffer[best_move_index].square_from[0];
+    output_move->square_from[1] = buffer[best_move_index].square_from[1];
+    output_move->square_to[0] = buffer[best_move_index].square_to[0];
+    output_move->square_to[1] = buffer[best_move_index].square_to[1];
 };
 
 #endif
