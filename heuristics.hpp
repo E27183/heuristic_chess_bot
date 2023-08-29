@@ -52,4 +52,8 @@ float simple_material_heuristic(board * board_) {
     return result;
 };
 
+float applied_heuristic(board * board_) {
+    return simple_material_heuristic(board_);
+};
+
 #endif

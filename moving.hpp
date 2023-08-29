@@ -659,7 +659,7 @@ bool is_saving(move * move_, check_and_pin_feedback * feedback) { // Returns tru
     return feedback->checks == 0 || feedback->valid_squares.count(static_cast<short>(move_->square_to[0] << 6) + move_->square_to[1]);
 };
 
-bool valid_move(move * move_, board * board_, check_and_pin_feedback * feedback) {
+bool valid_move(move * move_, board * board_, check_and_pin_feedback * feedback, bool confirmed_clear_path = false) {
     if (!is_in_bounds(move_->square_from) || !is_in_bounds(move_->square_to)) {
         return false;
     };
@@ -700,33 +700,41 @@ bool valid_move(move * move_, board * board_, check_and_pin_feedback * feedback)
             if (move_->square_from[0] != move_->square_to[0] && move_->square_from[1] != move_->square_to[1]) {
                 return false;
             } else if (move_->square_to[0] > move_->square_from[0]) {
-                for (int i = move_->square_from[0] + 1; i < move_->square_to[0]; i++) {
-                    if (board_->piece_positions[i][move_->square_from[1]] != empty_square) {
-                        return false;
+                if (!confirmed_clear_path) {
+                    for (int i = move_->square_from[0] + 1; i < move_->square_to[0]; i++) {
+                        if (board_->piece_positions[i][move_->square_from[1]] != empty_square) {
+                            return false;
+                        };
                     };
-                    return is_saving(move_, feedback);
                 };
+                return is_saving(move_, feedback);
             } else if (move_->square_to[0] < move_->square_from[0]) {
-                for (int i = move_->square_from[0] - 1; i > move_->square_to[0]; i--) {
-                    if (board_->piece_positions[i][move_->square_from[1]] != empty_square) {
-                        return false;
+                if (!confirmed_clear_path) {
+                    for (int i = move_->square_from[0] - 1; i > move_->square_to[0]; i--) {
+                        if (board_->piece_positions[i][move_->square_from[1]] != empty_square) {
+                            return false;
+                        };
                     };
-                    return is_saving(move_, feedback);
                 };
+                return is_saving(move_, feedback);
             } else if (move_->square_to[1] > move_->square_from[1]) {
-                for (int i = move_->square_from[1] + 1; i < move_->square_to[1]; i++) {
-                    if (board_->piece_positions[move_->square_from[0]][i] != empty_square) {
-                        return false;
+                if (!confirmed_clear_path) {
+                    for (int i = move_->square_from[1] + 1; i < move_->square_to[1]; i++) {
+                        if (board_->piece_positions[move_->square_from[0]][i] != empty_square) {
+                            return false;
+                        };
                     };
-                    return is_saving(move_, feedback);
                 };
+                return is_saving(move_, feedback);
             } else {
-                for (int i = move_->square_from[1] - 1; i > move_->square_to[1]; i--) {
-                    if (board_->piece_positions[move_->square_from[0]][i] != empty_square) {
-                        return false;
+                if (!confirmed_clear_path) {
+                    for (int i = move_->square_from[1] - 1; i > move_->square_to[1]; i--) {
+                        if (board_->piece_positions[move_->square_from[0]][i] != empty_square) {
+                            return false;
+                        };
                     };
-                    return is_saving(move_, feedback);
                 };
+                return is_saving(move_, feedback);
             };
         } else if (piece_to_move == own_knight) {
             if (abs(move_->square_from[0] - move_->square_to[0]) + abs(move_->square_from[1] - move_->square_to[1]) != 3) {
@@ -738,93 +746,117 @@ bool valid_move(move * move_, board * board_, check_and_pin_feedback * feedback)
             if (abs(move_->square_from[0] - move_->square_to[0]) != abs(move_->square_from[1] - move_->square_to[1])) {
                 return false;
             } else if (move_->square_to[0] > move_->square_from[0] && move_->square_to[1] > move_->square_to[1]) {
-                for (int i = 1; i < move_->square_to[0] - move_->square_from[0]; i++) {
-                    if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] + i] != empty_square) {
-                        return false;
+                if (!confirmed_clear_path) {
+                    for (int i = 1; i < move_->square_to[0] - move_->square_from[0]; i++) {
+                        if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] + i] != empty_square) {
+                            return false;
+                        };
                     };
-                    return is_saving(move_, feedback);
                 };
+                return is_saving(move_, feedback);
             } else if (move_->square_to[0] > move_->square_from[0] && move_->square_to[1] < move_->square_to[1]) {
-                for (int i = 1; i < move_->square_to[0] - move_->square_from[0]; i++) {
-                    if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] - i] != empty_square) {
-                        return false;
+                if (!confirmed_clear_path) {
+                    for (int i = 1; i < move_->square_to[0] - move_->square_from[0]; i++) {
+                        if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] - i] != empty_square) {
+                            return false;
+                        };
                     };
-                    return is_saving(move_, feedback);
                 };
+                return is_saving(move_, feedback);
             } else if (move_->square_to[0] < move_->square_from[0] && move_->square_to[1] > move_->square_to[1]) {
-                for (int i = -1; i > move_->square_to[0] - move_->square_from[0]; i--) {
-                    if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] - i] != empty_square) {
-                        return false;
+                if (!confirmed_clear_path) {
+                    for (int i = -1; i > move_->square_to[0] - move_->square_from[0]; i--) {
+                        if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] - i] != empty_square) {
+                            return false;
+                        };
                     };
-                    return is_saving(move_, feedback);
                 };
+                return is_saving(move_, feedback);
             } else {
-                for (int i = -1; i > move_->square_to[0] - move_->square_from[0]; i--) {
-                    if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] + i] != empty_square) {
-                        return false;
+                if (!confirmed_clear_path) {
+                    for (int i = -1; i > move_->square_to[0] - move_->square_from[0]; i--) {
+                        if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] + i] != empty_square) {
+                            return false;
+                        };
                     };
-                    return is_saving(move_, feedback);
                 };
+                return is_saving(move_, feedback);
             };
         } else if (piece_to_move == own_queen) {
             if ((move_->square_from[0] != move_->square_to[0] && move_->square_from[1] != move_->square_to[1]) && (abs(move_->square_from[0] - move_->square_to[0]) != abs(move_->square_from[1] - move_->square_to[1]))) {
                 return false;
             } else if (move_->square_to[0] > move_->square_from[0] && move_->square_from[1] == move_->square_to[1]) {
-                for (int i = move_->square_from[0] + 1; i < move_->square_to[0]; i++) {
-                    if (board_->piece_positions[i][move_->square_from[1]] != empty_square) {
-                        return false;
+                if (!confirmed_clear_path) {
+                    for (int i = move_->square_from[0] + 1; i < move_->square_to[0]; i++) {
+                        if (board_->piece_positions[i][move_->square_from[1]] != empty_square) {
+                            return false;
+                        };
                     };
-                    return is_saving(move_, feedback);
                 };
+                return is_saving(move_, feedback);
             } else if (move_->square_to[0] < move_->square_from[0] && move_->square_from[1] == move_->square_to[1]) {
-                for (int i = move_->square_from[0] - 1; i > move_->square_to[0]; i--) {
-                    if (board_->piece_positions[i][move_->square_from[1]] != empty_square) {
-                        return false;
+                if (!confirmed_clear_path) {
+                    for (int i = move_->square_from[0] - 1; i > move_->square_to[0]; i--) {
+                        if (board_->piece_positions[i][move_->square_from[1]] != empty_square) {
+                            return false;
+                        };
                     };
-                    return is_saving(move_, feedback);
                 };
+                return is_saving(move_, feedback);
             } else if (move_->square_to[1] > move_->square_from[1] && move_->square_from[1] == move_->square_to[0]) {
-                for (int i = move_->square_from[1] + 1; i < move_->square_to[1]; i++) {
-                    if (board_->piece_positions[move_->square_from[0]][i] != empty_square) {
-                        return false;
+                if (!confirmed_clear_path) {
+                    for (int i = move_->square_from[1] + 1; i < move_->square_to[1]; i++) {
+                        if (board_->piece_positions[move_->square_from[0]][i] != empty_square) {
+                            return false;
+                        };
                     };
-                    return is_saving(move_, feedback);
                 };
-            } else if (move_->square_to[1] < move_->square_from[1] && move_->square_from[1] == move_->square_to[0]){
-                for (int i = move_->square_from[1] - 1; i > move_->square_to[1]; i--) {
-                    if (board_->piece_positions[move_->square_from[0]][i] != empty_square) {
-                        return false;
+                return is_saving(move_, feedback);
+            } else if (move_->square_to[1] < move_->square_from[1] && move_->square_from[1] == move_->square_to[0]) {
+                if (!confirmed_clear_path) {
+                    for (int i = move_->square_from[1] - 1; i > move_->square_to[1]; i--) {
+                        if (board_->piece_positions[move_->square_from[0]][i] != empty_square) {
+                            return false;
+                        };
                     };
-                    return is_saving(move_, feedback);
                 };
+                return is_saving(move_, feedback);
             } else if (move_->square_to[0] > move_->square_from[0] && move_->square_to[1] > move_->square_to[1]) {
-                for (int i = 1; i < move_->square_to[0] - move_->square_from[0]; i++) {
-                    if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] + i] != empty_square) {
-                        return false;
+                if (!confirmed_clear_path) {
+                    for (int i = 1; i < move_->square_to[0] - move_->square_from[0]; i++) {
+                        if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] + i] != empty_square) {
+                            return false;
+                        };
                     };
-                    return is_saving(move_, feedback);
                 };
+                return is_saving(move_, feedback);
             } else if (move_->square_to[0] > move_->square_from[0] && move_->square_to[1] < move_->square_to[1]) {
-                for (int i = 1; i < move_->square_to[0] - move_->square_from[0]; i++) {
-                    if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] - i] != empty_square) {
-                        return false;
+                if (!confirmed_clear_path) {
+                    for (int i = 1; i < move_->square_to[0] - move_->square_from[0]; i++) {
+                        if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] - i] != empty_square) {
+                            return false;
+                        };
                     };
-                    return is_saving(move_, feedback);
                 };
+                return is_saving(move_, feedback);
             } else if (move_->square_to[0] < move_->square_from[0] && move_->square_to[1] > move_->square_to[1]) {
-                for (int i = -1; i > move_->square_to[0] - move_->square_from[0]; i--) {
-                    if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] - i] != empty_square) {
-                        return false;
+                if (!confirmed_clear_path) {
+                    for (int i = -1; i > move_->square_to[0] - move_->square_from[0]; i--) {
+                        if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] - i] != empty_square) {
+                            return false;
+                        };
                     };
-                    return is_saving(move_, feedback);
                 };
+                return is_saving(move_, feedback);
             } else {
-                for (int i = -1; i > move_->square_to[0] - move_->square_from[0]; i--) {
-                    if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] + i] != empty_square) {
-                        return false;
+                if (!confirmed_clear_path) {
+                    for (int i = -1; i > move_->square_to[0] - move_->square_from[0]; i--) {
+                        if (board_->piece_positions[move_->square_from[0] + i][move_->square_from[1] + i] != empty_square) {
+                            return false;
+                        };
                     };
-                    return is_saving(move_, feedback);
                 };
+                return is_saving(move_, feedback);
             };
         } else { // last case is pawn
             if (move_->square_to[0] == move_->square_from[0]) {

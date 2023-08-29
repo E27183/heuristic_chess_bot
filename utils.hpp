@@ -11,4 +11,8 @@ std::size_t hash_position(short * board) {
     return hash;
 };
 
+unsigned int min(unsigned int a, unsigned int b) {
+    return a > b ? b : a;
+};
+
 #endif

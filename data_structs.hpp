@@ -86,6 +86,8 @@ const short white_king_castle_row = 0, black_promote_row = 0, long_castle_to_cle
 const short black_king_castle_row = 7, white_promote_row = 7, short_castle_to_clean_col = 7;
 const short white_pawn_double_advance_row = 1;
 const short black_pawn_double_advance_row = 6;
+const short white_en_passant_row = 5;
+const short black_en_passant_row = 2;
 const short king_init_col = 4;
 const short king_castle_long_col = 2;
 const short king_castle_short_col = 6;
@@ -178,5 +180,8 @@ const short knight_ranges[8][2] = {{-2, -1}, {-2, 1}, {2, -1}, {2, 1}, {1, 2}, {
 const short king_ranges[8][2] = {{1, 1}, {1, 0}, {1, -1}, {0, 1}, {0, -1}, {-1, 1}, {-1, 0}, {-1, -1}};
 const short white_pawn_capture_ranges[2][2] = {{1, 1}, {-1, 1}};
 const short black_pawn_capture_ranges[2][2] = {{1, -1}, {-1, -1}};
+
+const short promotable_white_pieces[4] = {white_rook, white_knight, white_bishop, white_queen};
+const short promotable_black_pieces[4] = {black_rook, black_knight, black_bishop, black_queen};
 
 #endif
