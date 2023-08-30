@@ -15,4 +15,8 @@ unsigned int min(unsigned int a, unsigned int b) {
     return a > b ? b : a;
 };
 
+int int_min(int a, int b) {
+    return a > b ? b : a;
+};
+
 #endif
