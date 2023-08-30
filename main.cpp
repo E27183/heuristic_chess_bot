@@ -7,6 +7,96 @@
 #include <FL/Fl_Box.H>
 #include <FL/Fl_PNG_Image.H>
 #include <FL/Fl_Image.H>
+#include <FL/Fl_Button.H>
+
+Fl_Button *boxes[8][8];
+int indices[8][8];
+move move_;
+bool first_move = true;
+board board_;
+check_and_pin_feedback user_check_pin_feedback;
+
+struct {
+    Fl_Image * white_pawn;
+    Fl_Image * black_pawn;
+    Fl_Image * white_rook;
+    Fl_Image * black_rook;
+    Fl_Image * white_knight;
+    Fl_Image * black_knight;
+    Fl_Image * white_bishop;
+    Fl_Image * black_bishop;
+    Fl_Image * white_queen;
+    Fl_Image * black_queen;
+    Fl_Image * white_king;
+    Fl_Image * black_king;
+} images;
+
+void print_pieces_to_screen() {
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            if (board_.piece_positions[i][j] == white_pawn) {
+                boxes[i][j]->image(images.white_pawn);
+            } else if (board_.piece_positions[i][j] == black_pawn) {
+                boxes[i][j]->image(images.black_pawn);
+            } else if (board_.piece_positions[i][j] == white_rook) {
+                boxes[i][j]->image(images.white_rook);
+            } else if (board_.piece_positions[i][j] == black_rook) {
+                boxes[i][j]->image(images.black_rook);
+            } else if (board_.piece_positions[i][j] == black_knight) {
+                boxes[i][j]->image(images.black_knight);
+            } else if (board_.piece_positions[i][j] == white_knight) {
+                boxes[i][j]->image(images.white_knight);
+            } else if (board_.piece_positions[i][j] == white_bishop) {
+                boxes[i][j]->image(images.white_bishop);
+            } else if (board_.piece_positions[i][j] == black_bishop) {
+                boxes[i][j]->image(images.black_bishop);
+            } else if (board_.piece_positions[i][j] == white_queen) {
+                boxes[i][j]->image(images.white_queen);
+            } else if (board_.piece_positions[i][j] == black_queen) {
+                boxes[i][j]->image(images.black_queen);
+            } else if (board_.piece_positions[i][j] == white_king) {
+                boxes[i][j]->image(images.white_king);
+            } else if (board_.piece_positions[i][j] == black_king) {
+                boxes[i][j]->image(images.black_king);
+            } else {
+                boxes[i][j]->image(NULL);
+            };
+            boxes[i][j]->redraw();
+        };
+    };
+};
+
+void callbackfunc(Fl_Widget * widget, void * data) {
+    int index = *(int*)data;
+    int i = index >> 4;
+    int j = index % 8;
+    if (first_move) {
+        first_move = false;
+        move_.square_from[0] = i;
+        move_.square_from[1] = j;
+        widget->color(fl_rgb_color(255, 0, 0));
+    } else {
+        first_move = true;
+        move_.square_to[0] = i;
+        move_.square_to[1] = j;
+        is_checked_and_identify_pins_and_freedoms(&board_, board_.white_to_move, &user_check_pin_feedback);
+        if (valid_move(&move_, &board_, &user_check_pin_feedback)) {
+            make_move(&move_, &board_);
+            print_pieces_to_screen();
+        };
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                if ((i + j) % 2 == 0) {
+                    boxes[i][j]->color(fl_rgb_color(100, 100, 100));
+                    boxes[i][j]->redraw();
+                } else {
+                    boxes[i][j]->color(fl_rgb_color(0, 0, 200));
+                    boxes[i][j]->redraw();
+                };
+            };
+        };
+    };
+};
 
 int main(int argc, char *argv[]) {
     int x;
@@ -18,70 +108,46 @@ int main(int argc, char *argv[]) {
     int effectve_h = h - 100;
     int s = int_min(w, effectve_h);
     Fl_PNG_Image *wp = new Fl_PNG_Image("images/white_pawn.png");
-    Fl_Image *white_pawn_ = wp->copy(s / 9, s / 9);
+    images.white_pawn = wp->copy(s / 9, s / 9);
     Fl_PNG_Image *bp = new Fl_PNG_Image("images/black_pawn.png");
-    Fl_Image *black_pawn_ = bp->copy(s / 9, s / 9);
+    images.black_pawn = bp->copy(s / 9, s / 9);
     Fl_PNG_Image *wr = new Fl_PNG_Image("images/white_rook.png");
-    Fl_Image *white_rook_ = wr->copy(s / 9, s / 9);
+    images.white_rook = wr->copy(s / 9, s / 9);
     Fl_PNG_Image *br= new Fl_PNG_Image("images/black_rook.png");
-    Fl_Image *black_rook_ = br->copy(s / 9, s / 9);
+    images.black_rook = br->copy(s / 9, s / 9);
     Fl_PNG_Image *wn = new Fl_PNG_Image("images/white_knight.png");
-    Fl_Image *white_knight_ = wn->copy(s / 9, s / 9);
+    images.white_knight = wn->copy(s / 9, s / 9);
     Fl_PNG_Image *bn = new Fl_PNG_Image("images/black_knight.png");
-    Fl_Image *black_knight_ = bn->copy(s / 9, s / 9);
+    images.black_knight = bn->copy(s / 9, s / 9);
     Fl_PNG_Image *wb = new Fl_PNG_Image("images/white_bishop.png");
-    Fl_Image *white_bishop_ = wb->copy(s / 9, s / 9);
+    images.white_bishop = wb->copy(s / 9, s / 9);
     Fl_PNG_Image *bb = new Fl_PNG_Image("images/black_bishop.png");
-    Fl_Image *black_bishop_ = bb->copy(s / 9, s / 9);
+    images.black_bishop = bb->copy(s / 9, s / 9);
     Fl_PNG_Image *wq = new Fl_PNG_Image("images/white_queen.png");
-    Fl_Image *white_queen_ = wq->copy(s / 9, s / 9);
+    images.white_queen = wq->copy(s / 9, s / 9);
     Fl_PNG_Image *bq = new Fl_PNG_Image("images/black_queen.png");
-    Fl_Image *black_queen_ = bq->copy(s / 9, s / 9);
+    images.black_queen = bq->copy(s / 9, s / 9);
     Fl_PNG_Image *wk = new Fl_PNG_Image("images/white_king.png");
-    Fl_Image *white_king_ = wk->copy(s / 9, s / 9);
+    images.white_king = wk->copy(s / 9, s / 9);
     Fl_PNG_Image *bk = new Fl_PNG_Image("images/black_king.png");
-    Fl_Image *black_king_ = bk->copy(s / 9, s / 9);
+    images.black_king = bk->copy(s / 9, s / 9);
     int w_disp = (w - s) / 2;
     int h_disp = (effectve_h - s) / 2;
-    Fl_Box *boxes[8][8];
-    board board_;
     init_board(&board_);
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
-            boxes[i][j] = new Fl_Box(w_disp + (i * s) / 8, h_disp + (j * s) / 8 + 30, s / 8, s / 8);
+            boxes[i][j] = new Fl_Button(w_disp + (i * s) / 8, h_disp + (j * s) / 8 + 30, s / 8, s / 8);
             boxes[i][j]->box(FL_UP_BOX);
+            indices[i][j] = (i << 4) + j;
+            boxes[i][j]->callback(callbackfunc, &indices[i][j]);
             if ((i + j) % 2 == 0) {
                 boxes[i][j]->color(fl_rgb_color(100, 100, 100));
             } else {
                 boxes[i][j]->color(fl_rgb_color(0, 0, 200));
             };
-            if (board_.piece_positions[i][j] == white_pawn) {
-                boxes[i][j]->image(white_pawn_);
-            } else if (board_.piece_positions[i][j] == black_pawn) {
-                boxes[i][j]->image(black_pawn_);
-            } else if (board_.piece_positions[i][j] == white_rook) {
-                boxes[i][j]->image(white_rook_);
-            } else if (board_.piece_positions[i][j] == black_rook) {
-                boxes[i][j]->image(black_rook_);
-            } else if (board_.piece_positions[i][j] == black_knight) {
-                boxes[i][j]->image(black_knight_);
-            } else if (board_.piece_positions[i][j] == white_knight) {
-                boxes[i][j]->image(white_knight_);
-            } else if (board_.piece_positions[i][j] == white_bishop) {
-                boxes[i][j]->image(white_bishop_);
-            } else if (board_.piece_positions[i][j] == black_bishop) {
-                boxes[i][j]->image(black_bishop_);
-            } else if (board_.piece_positions[i][j] == white_queen) {
-                boxes[i][j]->image(white_queen_);
-            } else if (board_.piece_positions[i][j] == black_queen) {
-                boxes[i][j]->image(black_queen_);
-            } else if (board_.piece_positions[i][j] == white_king) {
-                boxes[i][j]->image(white_king_);
-            } else if (board_.piece_positions[i][j] == black_king) {
-                boxes[i][j]->image(black_king_);
-            };
         };
     };
+    print_pieces_to_screen();
 
     window->end();
     window->show(argc, argv);

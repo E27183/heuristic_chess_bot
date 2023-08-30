@@ -36,9 +36,9 @@ void make_move(move * move_, board * board_, short promotion_target = 0) { // Do
         flags: 0
     };
     if (board_->move == 0) {
-        current_move.flags = white_castle_long | white_castle_long | black_castle_long | black_castle_short;
+        current_move.flags = white_castle_long | white_castle_short | black_castle_long | black_castle_short;
     } else {
-        current_move.flags = (white_castle_long | white_castle_long | black_castle_long | black_castle_short) & board_->trace[board_->move - 1].flags;
+        current_move.flags = (white_castle_long | white_castle_short | black_castle_long | black_castle_short) & board_->trace[board_->move - 1].flags;
     };
     if (from_piece == white_pawn || from_piece == black_pawn || to_piece != empty_square) {
         current_move.turns_since_capture_or_advance = 0;
@@ -682,12 +682,89 @@ bool valid_move(move * move_, board * board_, check_and_pin_feedback * feedback,
     short own_pawn = board_->white_to_move ? white_pawn : black_pawn;
     if (piece_to_move == own_king) {
         if (abs(move_->square_from[0] - move_->square_to[0]) > 1 || abs(move_->square_from[1] - move_->square_to[1]) > 1) {
-            return false;
+            if (is_checked(board_, board_->white_to_move)) {
+                return false;
+            };
+            if (board_->white_to_move && move_->square_from[1] == white_king_castle_row && move_->square_from[0] == king_init_col && move_->square_to[1] == white_king_castle_row) {
+                if (board_->trace[board_->move - 1].flags & white_castle_short && move_->square_to[0] == king_castle_short_col) {
+                    for (const short &col : king_castle_short_cols_to_be_empty_or_checked) {
+                        if (board_->piece_positions[col][white_king_castle_row] != empty_square) {
+                            return false;
+                        } else {
+                            board_->piece_positions[col][white_king_castle_row] = white_king;
+                            board_->piece_positions[move_->square_from[0]][white_king_castle_row] = empty_square;
+                            bool legal = !is_checked(board_, board_->white_to_move);
+                            board_->piece_positions[col][white_king_castle_row] = empty_square;
+                            board_->piece_positions[move_->square_from[0]][white_king_castle_row] = white_king;
+                            if (!legal) {
+                                return false;
+                            };
+                        };
+                    };
+                    return true;
+                } else if (board_->trace[board_->move - 1].flags & white_castle_long && move_->square_to[0] == king_castle_long_col) {
+                    for (const short &col : king_castle_long_cols_to_be_empty) {
+                        if (board_->piece_positions[col][white_king_castle_row] != empty_square) {
+                            return false;
+                        };
+                    };
+                    for (const short &col : king_castle_long_cols_to_be_not_checked) {
+                        board_->piece_positions[col][white_king_castle_row] = white_king;
+                        board_->piece_positions[move_->square_from[0]][white_king_castle_row] = empty_square;
+                        bool legal = !is_checked(board_, board_->white_to_move);
+                        board_->piece_positions[col][white_king_castle_row] = empty_square;
+                        board_->piece_positions[move_->square_from[0]][white_king_castle_row] = white_king;
+                        if (!legal) {
+                            return false;
+                        };
+                    };
+                } else {
+                    return false;
+                };
+            } else if (!board_->white_to_move && move_->square_from[1] == black_king_castle_row && move_->square_from[0] == king_init_col && move_->square_to[1] == black_king_castle_row) {
+                if (board_->trace[board_->move - 1].flags & black_castle_short && move_->square_to[0] == king_castle_short_col) {
+                    for (const short &col : king_castle_short_cols_to_be_empty_or_checked) {
+                        if (board_->piece_positions[col][black_king_castle_row] != empty_square) {
+                            return false;
+                        } else {
+                            board_->piece_positions[col][black_king_castle_row] = black_king;
+                            board_->piece_positions[move_->square_from[0]][black_king_castle_row] = empty_square;
+                            bool legal = !is_checked(board_, board_->white_to_move);
+                            board_->piece_positions[col][black_king_castle_row] = empty_square;
+                            board_->piece_positions[move_->square_from[0]][black_king_castle_row] = black_king;
+                            if (!legal) {
+                                return false;
+                            };
+                        };
+                    };
+                    return true;
+                } else if (board_->trace[board_->move - 1].flags & black_castle_long && move_->square_to[0] == king_castle_long_col) {
+                    for (const short &col : king_castle_long_cols_to_be_empty) {
+                        if (board_->piece_positions[col][black_king_castle_row] != empty_square) {
+                            return false;
+                        };
+                    };
+                    for (const short &col : king_castle_long_cols_to_be_not_checked) {
+                        board_->piece_positions[col][black_king_castle_row] = black_king;
+                        board_->piece_positions[move_->square_from[0]][black_king_castle_row] = empty_square;
+                        bool legal = !is_checked(board_, board_->white_to_move);
+                        board_->piece_positions[col][black_king_castle_row] = empty_square;
+                        board_->piece_positions[move_->square_from[0]][black_king_castle_row] = black_king;
+                        if (!legal) {
+                            return false;
+                        };
+                    };
+                } else {
+                    return false;
+                };
+            } else {
+                return false;
+            };
         } else {
             short piece_in_memory = board_->piece_positions[move_->square_to[0]][move_->square_to[1]];
             board_->piece_positions[move_->square_to[0]][move_->square_to[1]] = own_king;
             board_->piece_positions[move_->square_from[0]][move_->square_from[1]] = empty_square;
-            bool legal = is_checked(board_, board_->white_to_move);
+            bool legal = !is_checked(board_, board_->white_to_move);
             board_->piece_positions[move_->square_to[0]][move_->square_to[1]] = piece_in_memory;
             board_->piece_positions[move_->square_from[0]][move_->square_from[1]] = own_king;
             return legal;
