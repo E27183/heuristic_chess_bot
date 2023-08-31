@@ -53,6 +53,20 @@ void make_move(move * move_, board * board_, short promotion_target = 0) { // Do
     if (from_piece == black_king) {
         current_move.flags = current_move.flags ^ (black_castle_long | black_castle_short);
     };
+    if (from_piece == white_rook && move_->square_from[1] == white_king_castle_row) {
+        if (move_->square_from[0] == short_castle_to_clean_col) {
+            current_move.flags = current_move.flags ^ white_castle_short;
+        } else if (move_->square_from[0] == long_castle_to_clean_col) {
+            current_move.flags = current_move.flags ^ white_castle_long;
+        };
+    };
+    if (from_piece == black_rook && move_->square_from[1] == black_king_castle_row) {
+        if (move_->square_from[0] == short_castle_to_clean_col) {
+            current_move.flags = current_move.flags ^ black_castle_short;
+        } else if (move_->square_from[0] == long_castle_to_clean_col) {
+            current_move.flags = current_move.flags ^ black_castle_long;
+        };
+    };
     if (from_piece == white_king && move_->square_from[1] == white_king_castle_row && move_->square_from[0] == king_init_col) {
         if (move_->square_to[0] == king_castle_long_col || move_->square_to[0] == king_castle_short_col) {
             current_move.taken_piece = castle_event;
